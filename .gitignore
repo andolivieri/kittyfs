@@ -1,0 +1,15 @@
+# Build artifacts
+/assets/cats_all/
+/dist/
+/kittyfs
+/kittyfs.exe
+
+# Local test volumes
+/demo/
+*.kittyfs-volume/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+
+.kifs/
