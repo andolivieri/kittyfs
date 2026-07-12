@@ -3,4 +3,5 @@ package assets
 
 import "embed"
 
+//go:embed cats/*.png
 var Cats embed.FS
