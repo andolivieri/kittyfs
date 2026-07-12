@@ -31,7 +31,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          generate_release_notes: true
+          body: Best kittyFS release ever 👍
           files: |
             dist/kittyfs-windows-amd64.exe
             dist/kittyfs-linux-amd64
