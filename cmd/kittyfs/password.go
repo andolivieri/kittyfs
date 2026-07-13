@@ -12,6 +12,7 @@ import (
 )
 
 const passwordEnv = "KITTYFS_PASSWORD"
+const corpusEnv = "KITTYFS_CORPUS"
 
 const minPasswordLen = 1
 

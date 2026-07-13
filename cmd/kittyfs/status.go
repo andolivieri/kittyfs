@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/andolivieri/kittyfs/internal/carrier"
 	"github.com/andolivieri/kittyfs/internal/fs"
 )
 
-func cmdStatus(dir string, args []string) error {
-	store, err := openStore(dir)
+func cmdStatus(o opts, args []string) error {
+	store, err := openStore(o)
 	if err != nil {
 		return err
 	}
@@ -63,13 +62,13 @@ func cmdStatus(dir string, args []string) error {
 	}
 	fmt.Println()
 
-	cats, err := carrier.NewEmbeddedCats()
+	covers, err := newCovers(o)
 	if err != nil {
 		return err
 	}
 	fmt.Println("carrier")
 	fmt.Printf("  kind             PNG (kiFS chunk before IEND)\n")
-	fmt.Printf("  cat corpus       %d embedded images\n", cats.Count())
+	fmt.Printf("  cover corpus     %s\n", describeCovers(covers))
 	return nil
 }
 

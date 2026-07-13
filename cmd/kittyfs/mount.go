@@ -20,7 +20,7 @@ import (
 const shareName = "kittyfs"
 
 // serves over WebDAV until interrupted
-func cmdMount(dir string, args []string) error {
+func cmdMount(o opts, args []string) error {
 	fset := flag.NewFlagSet("mount", flag.ContinueOnError)
 	addr := fset.String("addr", "localhost:8686", "address to serve WebDAV on (host:port)")
 	basicAuth := fset.Bool("basic-auth", false, "require HTTP Basic Auth on the endpoint")
@@ -33,7 +33,7 @@ func cmdMount(dir string, args []string) error {
 		return err
 	}
 
-	vfs, err := openVolume(dir)
+	vfs, err := openVolume(o)
 	if err != nil {
 		return err
 	}

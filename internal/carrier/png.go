@@ -1,10 +1,12 @@
 package carrier
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"io"
 )
 
 var pngSignature = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
@@ -87,6 +89,38 @@ func (c *PNGCarrier) Decode(mediaFile []byte) (blockID uint64, payload []byte, e
 		return parseKiFS(ch.data)
 	}
 	return 0, nil, ErrNotACarrier
+}
+
+func HasKiFSChunk(r io.ReadSeeker) (bool, error) {
+	if _, err := r.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+
+	sig := make([]byte, len(pngSignature))
+	if _, err := io.ReadFull(r, sig); err != nil || !bytes.Equal(sig, pngSignature) {
+		return false, ErrBadPNG
+	}
+
+	// walks chunk headers and seeks over the payloads
+	hdr := make([]byte, 8) // length(4)+type(4)
+	for {
+		if _, err := io.ReadFull(r, hdr); err != nil {
+			if err == io.EOF {
+				return false, nil // no IEND, but no kiFS either
+			}
+			return false, fmt.Errorf("%w: truncated chunk header", ErrBadPNG)
+		}
+		switch typ := string(hdr[4:8]); typ {
+		case kiFSType:
+			return true, nil
+		case "IEND":
+			return false, nil
+		}
+		length := binary.BigEndian.Uint32(hdr[0:4])
+		if _, err := r.Seek(int64(length)+4, io.SeekCurrent); err != nil { // +4 = CRC
+			return false, fmt.Errorf("%w: %v", ErrBadPNG, err)
+		}
+	}
 }
 
 func buildKiFS(blockID uint64, payload []byte, encrypted bool) []byte {

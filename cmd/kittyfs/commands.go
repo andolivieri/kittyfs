@@ -11,17 +11,42 @@ import (
 	"github.com/andolivieri/kittyfs/internal/fs"
 )
 
-func newCarrier() (carrier.Carrier, error) {
-	cats, err := carrier.NewEmbeddedCats()
+type opts struct {
+	volume string
+	corpus string
+}
+
+// Empty corpus => use embedded cats; otherwise the user's own directory
+func newCovers(o opts) (carrier.CoverSource, error) {
+	if o.corpus == "" {
+		return carrier.NewEmbeddedCats()
+	}
+	return carrier.NewDirCovers(o.corpus)
+}
+
+func newCarrier(o opts) (carrier.Carrier, error) {
+	covers, err := newCovers(o)
 	if err != nil {
 		return nil, err
 	}
-	return carrier.NewPNGCarrier(cats), nil
+	return carrier.NewPNGCarrier(covers), nil
+}
+
+func describeCovers(covers carrier.CoverSource) string {
+	d, ok := covers.(*carrier.DirCovers)
+	if !ok {
+		return fmt.Sprintf("embedded (%d cats)", covers.Count())
+	}
+	s := fmt.Sprintf("dir %s (%d PNGs", d.Root(), d.Count())
+	if n := d.Skipped(); n > 0 {
+		s += fmt.Sprintf(", %d non-PNG files skipped", n)
+	}
+	return s + ")"
 }
 
 // prompts for the password and re-derives the key
-func openStore(dir string) (*blockstore.DirStore, error) {
-	c, err := newCarrier()
+func openStore(o opts) (*blockstore.DirStore, error) {
+	c, err := newCarrier(o)
 	if err != nil {
 		return nil, err
 	}
@@ -29,19 +54,19 @@ func openStore(dir string) (*blockstore.DirStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return blockstore.Open(dir, c, keyDeriver(pw))
+	return blockstore.Open(o.volume, c, keyDeriver(pw))
 }
 
-func openVolume(dir string) (*fs.VolumeFS, error) {
-	store, err := openStore(dir)
+func openVolume(o opts) (*fs.VolumeFS, error) {
+	store, err := openStore(o)
 	if err != nil {
 		return nil, err
 	}
 	return fs.Open(store)
 }
 
-func cmdInit(dir string, args []string) error {
-	c, err := newCarrier()
+func cmdInit(o opts, args []string) error {
+	c, err := newCarrier(o)
 	if err != nil {
 		return err
 	}
@@ -49,7 +74,7 @@ func cmdInit(dir string, args []string) error {
 	if err != nil {
 		return err
 	}
-	store, err := blockstore.Create(dir, c, crypto.DefaultArgon2Params(), keyDeriver(pw))
+	store, err := blockstore.Create(o.volume, c, crypto.DefaultArgon2Params(), keyDeriver(pw))
 	if err != nil {
 		return err
 	}
@@ -57,11 +82,11 @@ func cmdInit(dir string, args []string) error {
 	if err := vfs.Flush(); err != nil {
 		return err
 	}
-	fmt.Printf("initialized encrypted kittyfs volume at %s\n", dir)
+	fmt.Printf("initialized encrypted kittyfs volume at %s\n", o.volume)
 	return nil
 }
 
-func cmdAdd(dir string, rest []string) error {
+func cmdAdd(o opts, rest []string) error {
 	if len(rest) < 1 {
 		return fmt.Errorf("usage: kittyfs [--volume DIR] add SRC [DEST]")
 	}
@@ -77,7 +102,7 @@ func cmdAdd(dir string, rest []string) error {
 	if err != nil {
 		return err
 	}
-	vfs, err := openVolume(dir)
+	vfs, err := openVolume(o)
 	if err != nil {
 		return err
 	}
@@ -91,12 +116,12 @@ func cmdAdd(dir string, rest []string) error {
 	return nil
 }
 
-func cmdGet(dir string, rest []string) error {
+func cmdGet(o opts, rest []string) error {
 	if len(rest) < 1 {
 		return fmt.Errorf("usage: kittyfs [--volume DIR] get PATH [OUT]")
 	}
 	srcPath := rest[0]
-	vfs, err := openVolume(dir)
+	vfs, err := openVolume(o)
 	if err != nil {
 		return err
 	}
@@ -115,12 +140,12 @@ func cmdGet(dir string, rest []string) error {
 	return err
 }
 
-func cmdLs(dir string, rest []string) error {
+func cmdLs(o opts, rest []string) error {
 	target := "/"
 	if len(rest) >= 1 {
 		target = rest[0]
 	}
-	vfs, err := openVolume(dir)
+	vfs, err := openVolume(o)
 	if err != nil {
 		return err
 	}
@@ -138,11 +163,11 @@ func cmdLs(dir string, rest []string) error {
 	return nil
 }
 
-func cmdRm(dir string, rest []string) error {
+func cmdRm(o opts, rest []string) error {
 	if len(rest) < 1 {
 		return fmt.Errorf("usage: kittyfs [--volume DIR] rm PATH")
 	}
-	vfs, err := openVolume(dir)
+	vfs, err := openVolume(o)
 	if err != nil {
 		return err
 	}

@@ -36,18 +36,26 @@ Available CLI commands and options:
 
 ```
 Usage:
-  kittyfs [--volume DIR] init            create an empty volume
-  kittyfs [--volume DIR] add SRC [DEST]  import a host file into the volume
-  kittyfs [--volume DIR] get PATH [OUT]  extract a file from the volume
-  kittyfs [--volume DIR] ls [PATH]       list volume contents
-  kittyfs [--volume DIR] rm PATH         remove a file from the volume
-  kittyfs [--volume DIR] status          show volume usage, blocks, encryption
-  kittyfs [--volume DIR] mount [--addr host:port] [--basic-auth]
-                                         serve the volume as a WebDAV drive
-  kittyfs cats                           print the embedded cat corpus size
-  kittyfs version                        print the kittyfs version
+  kittyfs [OPTIONS] COMMAND
+
+  kittyfs init            create an empty volume
+  kittyfs add SRC [DEST]  import a host file into the volume
+  kittyfs get PATH [OUT]  extract a file from the volume
+  kittyfs ls [PATH]       list volume contents
+  kittyfs rm PATH         remove a file from the volume
+  kittyfs status          show volume usage, blocks, encryption
+  kittyfs mount [--addr host:port] [--basic-auth]
+                          serve the volume as a WebDAV drive
+  kittyfs cats            print the active cover corpus
+  kittyfs version         print the kittyfs version
+
+Common options:
+  --volume DIR   use the volume in DIR instead of .kifs.
+  --corpus PATH  dress blocks as the PNGs in PATH (a directory, walked
+                 recursively, or a single PNG) instead of the embedded cats
 Envs:
   KITTYFS_PASSWORD - password
+  KITTYFS_CORPUS   - default --corpus path
 ```
 
 ## Requirements & build
@@ -57,7 +65,7 @@ Requires Go 1.25+
 Build with:
 
 ```sh
-make build          # host binary: ./kittyfs (or kittyfs.exe)
+make                # host binary: ./kittyfs (or kittyfs.exe)
 # or
 make build-all      # Linux, Windows and macOS binaries into dist/
 ```
@@ -89,6 +97,9 @@ Features:
 - **Mounts as a drive, no drivers**: `mount` serves the `fs` layer over a local
   WebDAV server (`x/net/webdav`), mounted with OS-native clients on Windows,
   macOS and Linux.
+- **Bring your own cats (BYOC)**: `--corpus` lets you use your own
+  PNGs instead of the embedded cats. Nothing about the corpus is stored in the
+  volume, so reading a volume back never needs it.
 - **Single self-contained binary**: pure Go, `CGO_ENABLED=0`, cat corpus
   embedded via `go:embed`
 
